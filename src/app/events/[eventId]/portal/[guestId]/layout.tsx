@@ -4,7 +4,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import PortalHeader from '@/components/legacy/portal/PortalHeader';
 import ProtectedRoute from '@/components/legacy/auth/ProtectedRoute';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, UserRole } from '@/context/AuthContext';
 
 interface Event {
     id: string;
@@ -82,7 +82,7 @@ export default function PortalLayout({
     }
 
     return (
-        <ProtectedRoute requiredRole="head_guest" guestId={guestId}>
+        <ProtectedRoute requiredRole={UserRole.HEAD_GUEST} guestId={guestId}>
             <div className="min-h-screen bg-gray-50">
                 <PortalHeader eventName={event.name} headGuestName={headGuest.name} />
                 <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

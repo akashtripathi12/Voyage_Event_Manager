@@ -3,11 +3,19 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-interface User {
+export enum UserRole {
+  ADMIN = "admin",
+  AGENT = "agent",
+  HEAD_GUEST = "head_guest",
+  GUEST = "guest"
+}
+
+export interface User {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: string | UserRole;
+  eventId?: string;
 }
 
 interface AuthContextType {

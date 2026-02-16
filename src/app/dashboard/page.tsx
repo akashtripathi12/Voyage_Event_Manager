@@ -7,6 +7,7 @@ import EventModal from '@/components/legacy/EventModal';
 import { useEvents } from '@/context/EventContext';
 import { useState } from 'react';
 import ProtectedRoute from '@/components/legacy/auth/ProtectedRoute';
+import { useAuth, UserRole } from '@/context/AuthContext';
 import LogoutButton from '@/components/legacy/auth/LogoutButton';
 
 export default function DashboardPage() {
@@ -14,7 +15,7 @@ export default function DashboardPage() {
   const [showEventModal, setShowEventModal] = useState(false);
 
   return (
-    <ProtectedRoute requiredRole="agent">
+    <ProtectedRoute requiredRole={UserRole.AGENT}>
       <div className="min-h-screen bg-neutral-50">
         {/* Header */}
         <div className="bg-white border-b border-neutral-200 px-8 py-6">

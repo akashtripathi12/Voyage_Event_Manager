@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import RoomAssignmentManager from "@/components/RoomAssignmentManager";
+import RoomAssignmentManager from "@/components/legacy/RoomAssignmentManager";
 import {
   mockRoomAllocations,
   mockRoomGroups,

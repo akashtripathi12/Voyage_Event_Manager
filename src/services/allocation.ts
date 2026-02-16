@@ -1,4 +1,4 @@
-import { AllocateRequest, GetAllocationsResponse, UpdateAllocationRequest } from "@/types/allocation";
+import { AllocateRequest, GetAllocationsResponse, UpdateAllocationRequest, EventDetails, Guest, RoomInventory, AllocatedFamily } from "@/types/allocation";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 
@@ -23,15 +23,57 @@ async function fetchWithAuth(url: string, token: string | null, options: Request
     });
 
     if (!response.ok) {
-        throw new Error(`API call failed: ${response.statusText}`);
+        let errorMessage = response.statusText;
+        try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (e) {
+            // Parsing failed, use status text
+        }
+        throw new Error(errorMessage);
     }
 
     return response.json();
 }
 
 export const allocationService = {
-    fetchAllocations: async (eventId: string, token: string): Promise<GetAllocationsResponse> => {
-        return fetchWithAuth(`/events/${eventId}/allocations`, token);
+    fetchEvent: async (eventId: string, token: string): Promise<EventDetails> => {
+        const response = await fetchWithAuth(`/events/${eventId}`, token);
+        // Normalized: unwrap nested "data" or "event" keys
+        const event = response?.data?.event ?? response?.event ?? null;
+        if (!event) throw new Error("Invalid event response shape");
+        return event;
+    },
+
+    fetchGuests: async (eventId: string, token: string): Promise<Guest[]> => {
+        const response = await fetchWithAuth(`/events/${eventId}/guests`, token);
+        // Normalized: unwrap { guests: [] } or { success: true, data: { guests: [] } }
+        const rawGuests = response?.data?.guests ?? response?.guests ?? [];
+
+        return rawGuests.map((g: any) => ({
+            guest_id: g.guest_id ?? g.id,
+            guest_name: g.guest_name ?? g.name,
+            family_id: g.family_id,
+            is_head_guest: g.is_head_guest ?? false,
+        }));
+    },
+
+    fetchAllocations: async (eventId: string, token: string): Promise<{
+        status: string;
+        rooms_inventory: RoomInventory[];
+        allocations: AllocatedFamily[];
+    }> => {
+        const response = await fetchWithAuth(`/events/${eventId}/allocations`, token);
+        const payload = response?.data ?? response;
+
+        return {
+            status: payload?.status ?? "draft",
+            rooms_inventory: (payload?.rooms_inventory ?? []).map((room: any) => ({
+                ...room,
+                total: room.total ?? room.available,
+            })),
+            allocations: payload?.allocations ?? []
+        };
     },
 
     createAllocation: async (data: AllocateRequest, token: string): Promise<void> => {
@@ -54,8 +96,14 @@ export const allocationService = {
         });
     },
 
-    lockEvent: async (eventId: string, token: string): Promise<{ message: string; status: string }> => {
-        return fetchWithAuth(`/events/${eventId}/lock`, token, {
+    finalizeEvent: async (eventId: string, token: string): Promise<void> => {
+        return fetchWithAuth(`/events/${eventId}/finalize`, token, {
+            method: "POST",
+        });
+    },
+
+    reopenEvent: async (eventId: string, token: string): Promise<void> => {
+        return fetchWithAuth(`/events/${eventId}/reopen`, token, {
             method: "POST",
         });
     },
