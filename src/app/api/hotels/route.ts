@@ -3,17 +3,17 @@ import { NextResponse } from 'next/server';
 export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
-        const cityId = searchParams.get('city_id');
-
+        // Forward all search params to the backend
+        const queryString = searchParams.toString();
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
         // Ensure backendUrl doesn't have a trailing slash
         const baseUrl = backendUrl?.replace(/\/$/, '');
-        let targetUrl = `${baseUrl}/api/v1/hotels`;
 
-        if (cityId) {
-            targetUrl += `?city_id=${cityId}`;
+        let targetUrl = `${baseUrl}/api/v1/hotels`;
+        if (queryString) {
+            targetUrl += `?${queryString}`;
         }
-        
+
         console.log(`Proxying request to: ${targetUrl}`);
 
         const authHeader = req.headers.get('Authorization') || '';

@@ -40,26 +40,6 @@ export default function DashboardPage() {
 
         {/* Main Content */}
         <div className="px-8 py-8">
-          {/* Metrics Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
-            {mockMetrics.map((metric) => (
-              <MetricCard 
-                key={metric.label} 
-                label={metric.label}
-                value={metric.value}
-                change={metric.change}
-                trend={metric.trend}
-              />
-            ))}
-          </div>
-
-          {/* Events Section */}
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-neutral-900 mb-4">
-              Active Events ({events.length})
-            </h2>
-          </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {events.map((event) => (
               <EventCard key={event.id} event={event} />

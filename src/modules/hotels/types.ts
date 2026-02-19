@@ -14,11 +14,89 @@ export interface Hotel {
     primary_room_offer_id?: string;
 }
 
+// --- Enums & Constants from Integration Guide ---
+
+export const PROPERTY_TYPES = [
+    "Hotel", "Resort", "Villa", "Apartment", "Hostel",
+    "Plaza", "Suites", "Inn", "Towers", "Gardens", "Boutique"
+] as const;
+
+export const HALL_TYPES = [
+    "Ballroom", "Lawn", "Poolside", "Banquet Hall",
+    "Conference Hall", "Executive Lounge"
+] as const;
+
+export const DIETARY_OPTIONS = [
+    "Veg", "Non-Veg", "Halal", "Jain", "Kosher", "Gluten-Free"
+] as const;
+
+export const ROOM_AMENITIES = [
+    "WiFi", "TV", "AC", "Balcony", "Mini Bar", "Bathtub",
+    "Kitchenette", "Jacuzzi", "Private Pool", "Butler Service"
+] as const;
+
+export const HOTEL_FACILITIES = [
+    "WiFi", "Pool", "Restaurant", "Gym", "Spa", "Valet Parking",
+    "Bar", "Nightclub", "Prayer Room", "Kids Club", "Playground",
+    "Eco-friendly", "Green Certified", "Wheelchair Accessible",
+    "Ground Floor Access", "Roll-in Shower", "Co-working Space",
+    "High-speed Upload"
+] as const;
+
+export const LOCATION_TAGS = [
+    "City Center", "Near Metro", "Near Beach"
+] as const;
+
+export const BANQUET_FEATURES = [
+    "AV", "Projector", "Sound System", "Stage"
+] as const;
+
 export interface HotelFilters {
-    min_price?: number;
-    max_price?: number;
-    stars?: string; // Comma-separated string
-    amenities?: string; // Comma-separated string
+    // Core
+    priceRange?: { min: number, max: number };
+    starRating?: number;         // 3, 4, 5
+    userRating?: number;         // 0-10
+    propertyTypes?: string[];    // ["Resort", "Villa"]
+
+    // Room
+    guestsPerRoom?: number;
+    roomCount?: number;
+    roomConfig?: Array<{ occupancy: number, count: number }>; // Complex room config
+    roomAmenities?: string[];    // ["Bathtub"]
+    freeCancellation?: boolean;  // true/false for free_cancellation param
+
+    // Event / Venue
+
+    // Event / Venue
+    hallType?: string;           // "Ballroom"
+    hallCapacity?: number;       // 200
+    banquetFeatures?: string[];  // ["AV"]
+    minHallArea?: number;        // Added to match API cap req
+    minCeilingHeight?: number;   // Added to match API cap req
+
+    // Policies & Metadata
+    policies?: {
+        alcohol?: boolean;
+        pets?: boolean;
+        late_night?: boolean;
+        outside_cake?: boolean;
+        outside_decor?: boolean;
+    };
+
+    dietary?: string[];          // ["Halal", "Veg"]
+
+    // Facilities (The "Master List" checkboxes)
+    facilities?: string[];       // ["Spa", "Prayer Room", "Kids Club"]
+    locationTags?: string[];     // ["Near Beach"]
+
+    // Legacy support fields can be kept or removed based on clean-up requirements
+    // Keeping minimal legacy for type safety elsewhere if needed strictly, 
+    // but ideally we migrate to this structure.
+    stars?: number; // legacy alias
+    min_price?: number; // legacy alias
+    max_price?: number; // legacy alias
+
+    // Legacy room configurations (still used in UI)
     rooms_single?: number;
     rooms_double?: number;
     rooms_triple?: number;

@@ -34,6 +34,10 @@ export default function HotelDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 1000; // 1 second
+
   // requirements state (default zero, will load from storage)
   const [requirements, setRequirements] = useState({
     single: 0,
@@ -71,17 +75,35 @@ export default function HotelDetailsPage() {
           token || undefined,
         );
         const currentHotel = allHotels.find((h) => h.id === hotelId);
-        if (currentHotel) setHotel(currentHotel);
+
+        if (currentHotel) {
+          setHotel(currentHotel);
+          setLoading(false); // Only stop loading if found
+        } else {
+          // If not found and we have retries left
+          if (retryCount < MAX_RETRIES) {
+            console.log(
+              `Hotel not found, retrying (${retryCount + 1}/${MAX_RETRIES})...`,
+            );
+            setTimeout(() => {
+              setRetryCount((prev) => prev + 1);
+            }, RETRY_DELAY);
+            // Keep loading true
+          } else {
+            // No more retries
+            setLoading(false);
+            console.warn("Hotel not found after retries");
+          }
+        }
       } catch (err: any) {
         console.error("Error fetching hotel details:", err);
         setError("Failed to load hotel details.");
-      } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [hotelId, eventId, token]);
+  }, [hotelId, eventId, token, retryCount]); // Depend on retryCount to re-trigger
 
   // wrapper for compatible access
   const REQUIREMENTS = requirements;
@@ -112,10 +134,41 @@ export default function HotelDetailsPage() {
 
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
+  // Loading overrides everything while active (due to retries)
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+          className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mb-4"
+        />
+        <p className="text-neutral-500 font-medium">
+          Loading inventory and details...
+        </p>
+      </div>
+    );
+  }
+
   if (!hotel) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-50 text-neutral-500">
-        {error || "Hotel not found."}
+      <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50 text-neutral-500 gap-4">
+        <p className="text-lg">{error || "Hotel not found."}</p>
+        <button
+          onClick={() => {
+            setRetryCount(0); // Reset retries
+            setLoading(true); // Manually trigger load
+          }}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Retry
+        </button>
+        <Link
+          href={`/events/${eventId}/hotels`}
+          className="text-blue-600 font-medium hover:underline"
+        >
+          Back to Hotels
+        </Link>
       </div>
     );
   }
@@ -183,14 +236,17 @@ export default function HotelDetailsPage() {
       // 2. Add Rooms
       const roomPromises = Object.entries(selectedRooms)
         .filter(([_, qty]) => qty > 0)
-        .map(([roomId, qty]) =>
-          addToCart(eventId, {
+        .map(([roomId, qty]) => {
+          console.log(
+            `DEBUG: Adding Room to Cart - ID: ${roomId}, Qty: ${qty}`,
+          );
+          return addToCart(eventId, {
             type: "room",
             refId: roomId,
             quantity: qty,
             status: "cart",
-          }),
-        );
+          });
+        });
 
       // 3. Add Banquet
       if (selectedBanquetHall) {
@@ -421,8 +477,7 @@ export default function HotelDetailsPage() {
                   </h2>
                   <span className="text-sm text-neutral-500 bg-neutral-100 px-3 py-1 rounded-full">
                     Event Needs: {REQUIREMENTS.single} Single,{" "}
-                    {REQUIREMENTS.double} Double,{" "}
-                    {REQUIREMENTS.triple} Triple,{" "}
+                    {REQUIREMENTS.double} Double, {REQUIREMENTS.triple} Triple,{" "}
                     {REQUIREMENTS.quad} Quad
                   </span>
                 </div>

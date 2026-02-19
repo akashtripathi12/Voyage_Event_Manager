@@ -4,14 +4,22 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useHotelDiscovery } from "@/modules/hotels/hooks/useHotelDiscovery";
-import { Hotel, HotelFilters, LocalFilterState, DEFAULT_FILTERS } from "@/modules/hotels/types";
+import {
+  Hotel,
+  HotelFilters,
+  LocalFilterState,
+  DEFAULT_FILTERS,
+} from "@/modules/hotels/types";
 import { useAuth } from "@/context/AuthContext";
 import { Toaster, toast } from "sonner";
 import { useCart } from "@/context/CartContext";
-import FilterPanel, { countActiveFilters } from "@/modules/hotels/components/FilterPanel";
+import FilterPanel, {
+  countActiveFilters,
+} from "@/modules/hotels/components/FilterPanel";
 import MobileFilterDrawer from "@/modules/hotels/components/MobileFilterDrawer";
 
 import { useEffect } from "react";
+import { mapLocalFiltersToApiFilters } from "@/modules/hotels/utils";
 
 // --- Components ---
 
@@ -148,7 +156,8 @@ const QuickFilterStrip = ({
     {
       label: "Free Cancellation",
       active: filters.freeCancellation,
-      toggle: () => setFilters({ ...filters, freeCancellation: !filters.freeCancellation }),
+      toggle: () =>
+        setFilters({ ...filters, freeCancellation: !filters.freeCancellation }),
     },
     {
       label: "5★ Hotels",
@@ -178,7 +187,10 @@ const QuickFilterStrip = ({
       label: "8+ Rating",
       active: filters.minRating === 8,
       toggle: () =>
-        setFilters({ ...filters, minRating: filters.minRating === 8 ? null : 8 }),
+        setFilters({
+          ...filters,
+          minRating: filters.minRating === 8 ? null : 8,
+        }),
     },
     {
       label: "Breakfast",
@@ -216,7 +228,8 @@ const QuickFilterStrip = ({
     {
       label: "Pet Friendly",
       active: filters.petFriendly,
-      toggle: () => setFilters({ ...filters, petFriendly: !filters.petFriendly }),
+      toggle: () =>
+        setFilters({ ...filters, petFriendly: !filters.petFriendly }),
     },
   ];
 
@@ -232,9 +245,7 @@ const QuickFilterStrip = ({
               : "bg-white text-neutral-600 border-neutral-200 hover:border-blue-300 hover:text-blue-600"
           }`}
         >
-          {qf.active && (
-            <span className="mr-1">✓</span>
-          )}
+          {qf.active && <span className="mr-1">✓</span>}
           {qf.label}
         </button>
       ))}
@@ -289,12 +300,18 @@ export default function HotelListingPage() {
     localStorage.setItem(`demand_${eventId}`, JSON.stringify(demand));
   }, [roomClusters, eventId]);
 
+  // Map local UI filters to API filters
+
+  const apiFilters = useMemo(() => {
+    return mapLocalFiltersToApiFilters(filters, roomFilters);
+  }, [filters, roomFilters]);
+
   const {
     hotels: discoveredHotels,
     loading,
     error,
     event,
-  } = useHotelDiscovery({ eventId, filters: roomFilters });
+  } = useHotelDiscovery({ eventId, filters: apiFilters });
 
   const { token } = useAuth();
   const { cart, fetchCart, addToCart, removeFromCart } = useCart();
@@ -333,7 +350,7 @@ export default function HotelListingPage() {
           type: "hotel",
           refId: hotel.id,
           quantity: 1,
-          status: "wishlist"
+          status: "wishlist",
         });
         toast.success("Added to wishlist!");
       } catch (err: any) {
@@ -342,111 +359,34 @@ export default function HotelListingPage() {
     }
   };
 
-  // Filter & Sort Logic — all client-side filters
+  // Client-side sorting only (filtering is now server-side)
   const filteredHotels = useMemo(() => {
-    return discoveredHotels
-      .filter((hotel: Hotel) => {
-        // Search
-        const matchesSearch =
+    let result = [...discoveredHotels];
+
+    // Search (keep purely client-side for finding specific hotel by name in the result set?)
+    // Or should search also go to backend? Usually search is backend.
+    // For now, let's keep search client-side as it might be a quick filter on the fetched page.
+    if (searchQuery) {
+      result = result.filter(
+        (hotel) =>
           hotel.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          hotel.location?.toLowerCase().includes(searchQuery.toLowerCase());
-        if (!matchesSearch) return false;
+          hotel.location?.toLowerCase().includes(searchQuery.toLowerCase()),
+      );
+    }
 
-        // Price
-        if (
-          (hotel.price || 0) < filters.priceRange[0] ||
-          (hotel.price || 0) > filters.priceRange[1]
-        )
-          return false;
-
-        // Stars
-        if (filters.stars.length > 0 && !filters.stars.includes(hotel.stars))
-          return false;
-
-        // Min Rating
-        if (filters.minRating !== null && (hotel.rating || 0) < filters.minRating)
-          return false;
-
-        // Type
-        if (filters.type.length > 0 && !filters.type.includes(hotel.type))
-          return false;
-
-        // Amenities (Check if hotel has ALL selected amenities)
-        if (filters.amenities.length > 0) {
-          const hasAllAmenities = filters.amenities.every((a: string) =>
-            hotel.amenities?.some(
-              (ha) => ha.toLowerCase() === a.toLowerCase()
-            ),
-          );
-          if (!hasAllAmenities) return false;
-        }
-
-        // Free Cancellation — filter on amenities containing "Free Cancellation" or "Cancellation"
-        if (filters.freeCancellation) {
-          const hasFreeCancel = hotel.amenities?.some(
-            (a) => a.toLowerCase().includes("free cancellation") || a.toLowerCase().includes("cancellation")
-          );
-          if (!hasFreeCancel) return false;
-        }
-
-        // Meal Plan — filter on amenities
-        if (filters.mealPlan.length > 0) {
-          const hasAnyMeal = filters.mealPlan.some((mp) =>
-            hotel.amenities?.some(
-              (a) => a.toLowerCase().includes(mp.toLowerCase().split(" ")[0])
-            ),
-          );
-          if (!hasAnyMeal) return false;
-        }
-
-        // Pet Friendly — filter on amenities
-        if (filters.petFriendly) {
-          const isPetFriendly = hotel.amenities?.some(
-            (a) => a.toLowerCase().includes("pet")
-          );
-          if (!isPetFriendly) return false;
-        }
-
-        // Venue Setting — filter on amenities/type containing venue keywords
-        if (filters.venueSetting.length > 0) {
-          const hasVenue = filters.venueSetting.some((vs) =>
-            hotel.amenities?.some(
-              (a) => a.toLowerCase().includes(vs.toLowerCase())
-            ),
-          );
-          if (!hasVenue) return false;
-        }
-
-        // Food Type — filter on amenities
-        if (filters.foodType.length > 0) {
-          const hasFood = filters.foodType.some((ft) =>
-            hotel.amenities?.some(
-              (a) => a.toLowerCase().includes(ft.toLowerCase())
-            ),
-          );
-          if (!hasFood) return false;
-        }
-
-        // Guest Capacity — filter on occupancy
-        if (filters.guestCapacity !== null) {
-          if ((hotel.occupancy || 0) < filters.guestCapacity) return false;
-        }
-
-        return true;
-      })
-      .sort((a: Hotel, b: Hotel) => {
-        switch (sortOption) {
-          case "price_low":
-            return (a.price || 0) - (b.price || 0);
-          case "price_high":
-            return (b.price || 0) - (a.price || 0);
-          case "rating":
-            return (b.rating || 0) - (a.rating || 0);
-          default:
-            return (b.rating || 0) - (a.rating || 0);
-        }
-      });
-  }, [discoveredHotels, filters, searchQuery, sortOption]);
+    return result.sort((a: Hotel, b: Hotel) => {
+      switch (sortOption) {
+        case "price_low":
+          return (a.price || 0) - (b.price || 0);
+        case "price_high":
+          return (b.price || 0) - (a.price || 0);
+        case "rating":
+          return (b.rating || 0) - (a.rating || 0);
+        default:
+          return (b.rating || 0) - (a.rating || 0); // popularity fallback to rating
+      }
+    });
+  }, [discoveredHotels, searchQuery, sortOption]);
 
   const handleSelectHotel = (hotelId: string) => {
     const demand = roomClusters.reduce(
@@ -538,7 +478,8 @@ export default function HotelListingPage() {
                 </span>
                 {activeFilterCount > 0 && (
                   <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full font-medium">
-                    {activeFilterCount} {activeFilterCount === 1 ? "filter" : "filters"} applied
+                    {activeFilterCount}{" "}
+                    {activeFilterCount === 1 ? "filter" : "filters"} applied
                   </span>
                 )}
               </div>
@@ -769,8 +710,18 @@ export default function HotelListingPage() {
         onClick={() => setMobileFilterOpen(true)}
         className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 lg:hidden flex items-center gap-2 px-6 py-3.5 bg-blue-600 text-white font-semibold rounded-full shadow-xl shadow-blue-600/30 hover:bg-blue-700 transition-all active:scale-95"
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+          />
         </svg>
         Filters
         {activeFilterCount > 0 && (
