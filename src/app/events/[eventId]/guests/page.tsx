@@ -1,8 +1,51 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { GuestInput } from "@/types";
+
+interface EventDetails {
+  id: string;
+  name: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  description?: string;
+}
+
+function formatDateRange(startDate?: string, endDate?: string): string {
+  if (!startDate) return "";
+  try {
+    const start = new Date(startDate);
+    const end = endDate ? new Date(endDate) : null;
+    const opts: Intl.DateTimeFormatOptions = { month: "long", day: "numeric" };
+    const yearOpts: Intl.DateTimeFormatOptions = { ...opts, year: "numeric" };
+    if (!end || start.toDateString() === end.toDateString()) {
+      return start.toLocaleDateString("en-IN", yearOpts);
+    }
+    if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
+      return `${start.toLocaleDateString("en-IN", opts)}\u2013${end.getDate()}, ${start.getFullYear()}`;
+    }
+    if (start.getFullYear() === end.getFullYear()) {
+      return `${start.toLocaleDateString("en-IN", opts)} \u2013 ${end.toLocaleDateString("en-IN", opts)}, ${start.getFullYear()}`;
+    }
+    return `${start.toLocaleDateString("en-IN", yearOpts)} \u2013 ${end.toLocaleDateString("en-IN", yearOpts)}`;
+  } catch {
+    return startDate;
+  }
+}
+
+function getEventEmoji(name: string): string {
+  const l = name.toLowerCase();
+  if (l.includes("wedding") || l.includes("marriage") || l.includes("shaadi") || l.includes("vivah")) return "\uD83D\uDC8D";
+  if (l.includes("birthday") || l.includes("bday")) return "\uD83C\uDF82";
+  if (l.includes("conference") || l.includes("summit") || l.includes("meet")) return "\uD83C\uDFDB\uFE0F";
+  if (l.includes("party") || l.includes("celebration")) return "\uD83C\uDF89";
+  if (l.includes("corporate") || l.includes("annual")) return "\uD83C\uDFE2";
+  if (l.includes("gala") || l.includes("award")) return "\uD83C\uDFC6";
+  return "\uD83C\uDF8A";
+}
 
 interface FamilyMember {
   id: string;
@@ -22,6 +65,51 @@ export default function GuestsPage({
   const { eventId } = use(params);
   const { token } = useAuth();
 
+  // Event data — fetched from API
+  const [event, setEvent] = useState<EventDetails | null>(null);
+  const [eventLoading, setEventLoading] = useState(true);
+  const [eventError, setEventError] = useState("");
+
+  useEffect(() => {
+    const fetchEvent = async () => {
+      setEventLoading(true);
+      setEventError("");
+      try {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+        // Read token synchronously from localStorage — avoids React context timing race.
+        // AuthContext also reads from localStorage, but its state is null until after
+        // the first effect runs. By reading localStorage directly here we always have
+        // the token immediately on mount.
+        const authToken =
+          token ??
+          (typeof window !== "undefined" ? localStorage.getItem("token") : null);
+        const headers: Record<string, string> = {};
+        if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+
+        const res = await fetch(`${backendUrl}/api/v1/events/${eventId}`, { headers });
+        if (!res.ok) throw new Error(`Event not found (${res.status})`);
+        const data = await res.json();
+        const raw = data?.data?.event ?? data?.event ?? data;
+        setEvent({
+          id: raw.id ?? raw.ID ?? eventId,
+          name: raw.name ?? raw.Name ?? "Event",
+          location: raw.location ?? raw.Location ?? "",
+          startDate: raw.start_date ?? raw.startDate ?? raw.StartDate ?? "",
+          endDate: raw.end_date ?? raw.endDate ?? raw.EndDate ?? "",
+          status: (raw.status ?? raw.Status ?? "upcoming").toLowerCase(),
+          description: raw.description ?? raw.Description ?? "",
+        });
+      } catch (err: any) {
+        console.error("[GuestsPage] Failed to load event:", err);
+        setEventError(err.message ?? "Failed to load event details");
+      } finally {
+        setEventLoading(false);
+      }
+    };
+    fetchEvent();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId]); // run once per event — token is read from localStorage directly
+
   // Form state
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
@@ -38,43 +126,14 @@ export default function GuestsPage({
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Mock event data
-  const eventData = {
-    name: "Ananya & Rahul Wedding",
-    location: "Jaipur, Rajasthan",
-    dates: "February 12-14, 2026",
-    bannerImage: "🎊",
-  };
-
-  const itinerary = [
-    { day: "Day 1", event: "Welcome Dinner", time: "7:00 PM", date: "Feb 12" },
-    { day: "Day 2", event: "Wedding Ceremony", time: "6:00 PM", date: "Feb 13" },
-    { day: "Day 3", event: "Reception", time: "8:00 PM", date: "Feb 14" },
-  ];
-
   // Cancellation Form State
   const [cancelName, setCancelName] = useState("");
   const [cancelRoom, setCancelRoom] = useState("");
   const [cancelReason, setCancelReason] = useState("");
-
-  const [cancellationRequests, setCancellationRequests] = useState([
-    {
-      id: "1",
-      guestName: "Rajesh Kumar",
-      roomType: "Deluxe Suite",
-      reason: "Family emergency",
-      status: "pending" as const,
-      requestDate: "2026-02-01",
-    },
-    {
-      id: "2",
-      guestName: "Amit Patel",
-      roomType: "Executive Suite",
-      reason: "Health issues",
-      status: "pending" as const,
-      requestDate: "2026-02-03",
-    },
-  ]);
+  const [cancellationRequests, setCancellationRequests] = useState<Array<{
+    id: string; guestName: string; roomType: string;
+    reason: string; status: "pending" | "approved" | "rejected"; requestDate: string;
+  }>>([]);
 
   const handleCancelSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,20 +292,61 @@ export default function GuestsPage({
     );
   }
 
+  // Loading state
+  if (eventLoading) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-corporate-blue-100 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-neutral-500 text-sm">Loading event details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Event not found
+  if (eventError || !event) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-xl p-8 max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Event Not Found</h2>
+          <p className="text-gray-500 text-sm">{eventError || "This invitation link may be invalid or expired."}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const dateRange = formatDateRange(event.startDate, event.endDate);
+  const eventEmoji = getEventEmoji(event.name);
+
   return (
     <div className="min-h-screen bg-neutral-50">
       {/* Event Banner */}
       <div className="bg-gradient-premium text-white">
         <div className="container mx-auto px-6 py-12">
           <div className="flex items-center justify-center gap-4 mb-4">
-            <span className="text-6xl">{eventData.bannerImage}</span>
+            <span className="text-6xl">{eventEmoji}</span>
           </div>
           <h1 className="text-4xl font-bold text-center mb-2">
-            {eventData.name}
+            {event.name}
           </h1>
           <p className="text-center text-white/90">
-            {eventData.location} • {eventData.dates}
+            {event.location && <span>{event.location}</span>}
+            {event.location && dateRange && <span> • </span>}
+            {dateRange && <span>{dateRange}</span>}
           </p>
+          {event.status && event.status !== "active" && (
+            <div className="flex justify-center mt-3">
+              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/20 text-white capitalize">
+                {event.status}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -258,48 +358,44 @@ export default function GuestsPage({
               Event Overview
             </h2>
             <div className="prose prose-sm max-w-none text-neutral-700">
-              <p>
-                Join us for a spectacular celebration of love and togetherness.
-                This three-day event promises unforgettable moments, exquisite
-                dining, and world-class hospitality in the heart of Jaipur.
-              </p>
-              <p className="mt-3">
-                We have secured exclusive group rates at premium hotels with
-                specially curated packages for our guests. Please complete your
-                registration to reserve your accommodation.
-              </p>
+              {event.description ? (
+                <p>{event.description}</p>
+              ) : (
+                <>
+                  <p>
+                    You have been invited to <strong>{event.name}</strong>
+                    {event.location ? ` in ${event.location}` : ""}.
+                    {dateRange ? ` The event takes place on ${dateRange}.` : ""}
+                  </p>
+                  <p className="mt-3">
+                    Please complete your registration below so we can make the
+                    necessary arrangements for your stay and participation.
+                  </p>
+                </>
+              )}
             </div>
-          </section>
 
-          {/* Itinerary */}
-          <section className="card p-6">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-6">
-              Event Itinerary
-            </h2>
-            <div className="space-y-4">
-              {itinerary.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-start gap-4 p-4 bg-neutral-50 rounded-lg border border-neutral-200"
-                >
-                  <div className="flex-shrink-0 w-12 h-12 bg-corporate-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-white font-bold">{index + 1}</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-semibold text-neutral-900">
-                        {item.event}
-                      </h3>
-                      <span className="text-sm text-neutral-600">
-                        {item.date}
-                      </span>
-                    </div>
-                    <p className="text-sm text-neutral-600">
-                      {item.day} • {item.time}
-                    </p>
-                  </div>
+            {/* Event Info Pills */}
+            <div className="flex flex-wrap gap-3 mt-5">
+              {event.location && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-full text-sm text-blue-700 font-medium">
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  {event.location}
                 </div>
-              ))}
+              )}
+              {dateRange && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 rounded-full text-sm text-purple-700 font-medium">
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  {dateRange}
+                </div>
+              )}
             </div>
           </section>
 

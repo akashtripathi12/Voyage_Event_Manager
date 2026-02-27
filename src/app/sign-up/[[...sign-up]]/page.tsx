@@ -20,8 +20,25 @@ export default function SignUpPage() {
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
+  // Phone validation helpers
+  const handlePhoneChange = (value: string, setter: (v: string) => void) => {
+    const digits = value.replace(/\D/g, '').slice(0, 10);
+    setter(digits);
+  };
+
+  const phoneValid = phone === '' || phone.length === 10;
+  const businessPhoneValid = businessPhone === '' || businessPhone.length === 10;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (phone && phone.length !== 10) {
+      setError('Phone number must be exactly 10 digits.');
+      return;
+    }
+    if (businessPhone && businessPhone.length !== 10) {
+      setError('Business phone number must be exactly 10 digits.');
+      return;
+    }
     setError('');
     setLoading(true);
 
@@ -96,7 +113,21 @@ export default function SignUpPage() {
                     </div>
                     <div>
                         <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone</label>
-                        <input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+                        <input
+                          id="phone"
+                          type="tel"
+                          inputMode="numeric"
+                          maxLength={10}
+                          required
+                          value={phone}
+                          onChange={(e) => handlePhoneChange(e.target.value, setPhone)}
+                          className={`mt-1 block w-full border rounded-md shadow-sm p-2 ${
+                            !phoneValid ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                        />
+                        {!phoneValid && (
+                          <p className="mt-1 text-xs text-red-600">Phone number must be exactly 10 digits.</p>
+                        )}
                     </div>
                 </div>
             </div>
@@ -117,9 +148,23 @@ export default function SignUpPage() {
                         <label htmlFor="location" className="block text-sm font-medium text-gray-700">Location</label>
                         <input id="location" required value={location} onChange={(e) => setLocation(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
                     </div>
-                     <div>
+                    <div>
                         <label htmlFor="businessPhone" className="block text-sm font-medium text-gray-700">Business Phone</label>
-                        <input id="businessPhone" value={businessPhone} onChange={(e) => setBusinessPhone(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+                        <input
+                          id="businessPhone"
+                          type="tel"
+                          inputMode="numeric"
+                          maxLength={10}
+                          required
+                          value={businessPhone}
+                          onChange={(e) => handlePhoneChange(e.target.value, setBusinessPhone)}
+                          className={`mt-1 block w-full border rounded-md shadow-sm p-2 ${
+                            !businessPhoneValid ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                        />
+                        {!businessPhoneValid && (
+                          <p className="mt-1 text-xs text-red-600">Business phone must be exactly 10 digits.</p>
+                        )}
                     </div>
                 </div>
             </div>
