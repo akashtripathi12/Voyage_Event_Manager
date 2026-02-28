@@ -3,6 +3,10 @@ import { Hotel, HotelDataWrapper, Banquet, Catering, RoomType, HotelFilters } fr
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 const API_URL = `${backendUrl}/api/v1`;
 
+/** Returns true if the string is a valid UUID (v4 or any standard format). */
+const isUUID = (val: unknown): val is string =>
+    typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
 export const hotelApi = {
     /**
      * Fetch hotels for a specific city
@@ -33,11 +37,18 @@ export const hotelApi = {
                 params.append("type", filters.propertyTypes[0]);
             }
 
-            // 2. Room
-            if (filters.guestsPerRoom !== undefined) params.append("guests_per_room", filters.guestsPerRoom.toString());
-            if (filters.roomCount !== undefined) params.append("room_count", filters.roomCount.toString());
+            // 2. Room - General Occupancy (>=, not exact match)
+            if (filters.occupancy !== undefined) params.append("occupancy", filters.occupancy.toString());
+            if (filters.guests_per_room !== undefined) params.append("guests_per_room", filters.guests_per_room.toString());
 
-            // Complex Config
+            // Room Type Inventory Filters (exact capacity match, Strict AND)
+            // IMPORTANT: Only send params if count > 0. Omit entirely if zero.
+            if (filters.rooms_single && filters.rooms_single > 0) params.append("rooms_single", filters.rooms_single.toString());
+            if (filters.rooms_double && filters.rooms_double > 0) params.append("rooms_double", filters.rooms_double.toString());
+            if (filters.rooms_triple && filters.rooms_triple > 0) params.append("rooms_triple", filters.rooms_triple.toString());
+            if (filters.rooms_quad && filters.rooms_quad > 0) params.append("rooms_quad", filters.rooms_quad.toString());
+
+            // Advanced: room_config JSON for custom capacities
             if (filters.roomConfig && filters.roomConfig.length > 0) {
                 params.append("room_config", JSON.stringify(filters.roomConfig));
             }
@@ -50,45 +61,8 @@ export const hotelApi = {
                 params.append("free_cancellation", "true");
             }
 
-            // Legacy Room Params (Keep for now if they are just fallback aliases)
-            if (filters.rooms_single) params.append('rooms_single', filters.rooms_single.toString());
-            if (filters.rooms_double) params.append('rooms_double', filters.rooms_double.toString());
-            if (filters.rooms_triple) params.append('rooms_triple', filters.rooms_triple.toString());
-            if (filters.rooms_quad) params.append('rooms_quad', filters.rooms_quad.toString());
-
-            // 3. Event
-            if (filters.hallType) params.append("hall_type", filters.hallType);
-            if (filters.hallCapacity !== undefined) params.append("hall_capacity", filters.hallCapacity.toString());
-            if (filters.banquetFeatures && filters.banquetFeatures.length > 0) {
-                params.append("banquet_features", filters.banquetFeatures.join(","));
-            }
-            if (filters.minHallArea !== undefined) params.append('min_hall_area', filters.minHallArea.toString());
-            if (filters.minCeilingHeight !== undefined) params.append('min_ceiling_height', filters.minCeilingHeight.toString());
-
-            // 4. Facilities & Location
-            if (filters.facilities && filters.facilities.length > 0) {
-                params.append("facilities", filters.facilities.join(","));
-            }
-            if (filters.locationTags && filters.locationTags.length > 0) {
-                params.append("location_tags", filters.locationTags.join(","));
-            }
-
-            // 5. Dietary
-            if (filters.dietary && filters.dietary.length > 0) {
-                params.append("dietary", filters.dietary[0]);
-            }
-
-            // 6. Policies
-            const policyList: string[] = [];
-            if (filters.policies) {
-                if (filters.policies.alcohol) policyList.push("alcohol:allowed");
-                if (filters.policies.pets) policyList.push("pets:true");
-                if (filters.policies.late_night) policyList.push("late_night:true");
-                if (filters.policies.outside_cake) policyList.push("outside_cake:true");
-                if (filters.policies.outside_decor) policyList.push("outside_decor:true");
-            }
-            if (policyList.length > 0) {
-                params.append("policies", policyList.join(","));
+            if (filters.skip_cache) {
+                params.append("skip_cache", "true");
             }
         }
 
@@ -137,15 +111,34 @@ export const hotelApi = {
 
         const roomsList = result.data || result || [];
         console.log("DEBUG: Raw Rooms Response:", roomsList); // Debug logging
-        return (Array.isArray(roomsList) ? roomsList : []).map((r: any) => ({
-            id: r.id,
-            hotelId: r.hotel_id || r.hotelId || hotelCode,
-            name: r.name,
-            price: r.total_fare || r.price || 0,
-            capacity: r.max_capacity || r.capacity || 0,
-            inventory: r.count || r.inventory || 0,
-            description: r.description || ''
-        }));
+        return (Array.isArray(roomsList) ? roomsList : []).map((r: any) => {
+            // The cart backend does a UUID lookup on room_offers, so we MUST send a UUID.
+            // Try every field that might hold the UUID, in priority order.
+            const roomId =
+                isUUID(r.room_offer_id) ? r.room_offer_id :
+                    isUUID(r.offer_id) ? r.offer_id :
+                        isUUID(r.room_uuid) ? r.room_uuid :
+                            isUUID(r.id) ? r.id :
+                                r.room_offer_id || r.id; // last-resort fallback (may still fail)
+
+            if (!isUUID(roomId)) {
+                console.warn(
+                    `[hotelApi.getRooms] Room "${r.name}" has no UUID ID – ` +
+                    `cart will likely return "Room offer not found". Raw room:`,
+                    r
+                );
+            }
+
+            return {
+                id: roomId,
+                hotelId: r.hotel_id || r.hotelId || hotelCode,
+                name: r.name,
+                price: r.total_fare || r.price || 0,
+                capacity: r.max_capacity || r.capacity || 0,
+                inventory: r.count || r.inventory || 0,
+                description: r.description || ''
+            };
+        });
     },
 
     /**

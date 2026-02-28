@@ -23,7 +23,13 @@ import { mapLocalFiltersToApiFilters } from "@/modules/hotels/utils";
 
 // --- Components ---
 
-const SearchBar = ({ onSearch }: { onSearch: (query: string) => void }) => {
+const SearchBar = ({
+  onSearch,
+  onSearchClick,
+}: {
+  onSearch: (query: string) => void;
+  onSearchClick: () => void;
+}) => {
   return (
     <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-6 rounded-xl shadow-lg mb-8 text-white">
       <div className="flex gap-4">
@@ -54,7 +60,10 @@ const SearchBar = ({ onSearch }: { onSearch: (query: string) => void }) => {
           </div>
         </div>
         <div className="flex items-end">
-          <button className="px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold rounded-lg shadow-md transition-all transform hover:scale-[1.02]">
+          <button
+            onClick={onSearchClick}
+            className="px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold rounded-lg shadow-md transition-all transform hover:scale-[1.02]"
+          >
             Search
           </button>
         </div>
@@ -267,6 +276,10 @@ export default function HotelListingPage() {
   >("popularity");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
+  const [searchMode, setSearchMode] = useState<"occupancy" | "inventory">(
+    "inventory",
+  );
+
   const [roomClusters, setRoomClusters] = useState<RoomCluster[]>([
     { id: "single", label: "Single", occupants: 1, count: 5 },
     { id: "double", label: "Double", occupants: 2, count: 10 },
@@ -274,19 +287,67 @@ export default function HotelListingPage() {
     { id: "quad", label: "Quad", occupants: 4, count: 0 },
   ]);
 
-  // Derive backend HotelFilters from room cluster selections
+  const OccupancyCounter = () => (
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-neutral-200 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div>
+        <h3 className="text-lg font-bold text-neutral-900">
+          Simple Guest Search
+        </h3>
+        <p className="text-sm text-neutral-500">
+          Find hotels that can accommodate a specific number of guests in one
+          room.
+        </p>
+      </div>
+      <div className="flex items-center gap-4">
+        <span className="font-semibold text-neutral-700">Total Guests:</span>
+        <div className="flex items-center gap-3 bg-neutral-50 p-1 rounded-full border border-neutral-200">
+          <button
+            onClick={() =>
+              setFilters({
+                ...filters,
+                totalOccupancy: Math.max(1, (filters.totalOccupancy || 1) - 1),
+              })
+            }
+            className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-xl font-bold hover:bg-neutral-100 transition-colors"
+          >
+            -
+          </button>
+          <span className="text-2xl font-bold w-8 text-center">
+            {filters.totalOccupancy || 1}
+          </span>
+          <button
+            onClick={() =>
+              setFilters({
+                ...filters,
+                totalOccupancy: (filters.totalOccupancy || 1) + 1,
+              })
+            }
+            className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-xl font-bold hover:bg-neutral-100 transition-colors"
+          >
+            +
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Derive backend HotelFilters from room cluster selections or occupancy
   const roomFilters = useMemo<HotelFilters>(() => {
     const f: HotelFilters = {};
-    roomClusters.forEach((c) => {
-      if (c.count > 0) {
-        if (c.id === "single") f.rooms_single = c.count;
-        if (c.id === "double") f.rooms_double = c.count;
-        if (c.id === "triple") f.rooms_triple = c.count;
-        if (c.id === "quad") f.rooms_quad = c.count;
-      }
-    });
+    if (searchMode === "inventory") {
+      roomClusters.forEach((c) => {
+        if (c.count > 0) {
+          if (c.id === "single") f.rooms_single = c.count;
+          if (c.id === "double") f.rooms_double = c.count;
+          if (c.id === "triple") f.rooms_triple = c.count;
+          if (c.id === "quad") f.rooms_quad = c.count;
+        }
+      });
+    } else {
+      f.occupancy = filters.totalOccupancy || 1;
+    }
     return f;
-  }, [roomClusters]);
+  }, [roomClusters, searchMode, filters.totalOccupancy]);
 
   // Auto-persist room demand to localStorage for hotel details page
   useEffect(() => {
@@ -403,6 +464,13 @@ export default function HotelListingPage() {
 
   const activeFilterCount = countActiveFilters(filters);
 
+  const handleSearch = () => {
+    // Force skip_cache when search button is clicked
+    setFilters((prev) => ({ ...prev, skipCache: true }));
+    // Reset skipCache after a short delay so subsequent filter changes might use cache
+    // Or keep it true? Documentation says "Use skip_cache=true if you are implementing a Search button"
+  };
+
   return (
     <div className="min-h-screen bg-neutral-50 pb-24 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -450,14 +518,34 @@ export default function HotelListingPage() {
           </div>
         </div>
 
-        {/* Room Cluster Selector */}
-        <RoomClusterSelector
-          clusters={roomClusters}
-          setClusters={setRoomClusters}
-        />
+        {/* Search Mode Switcher */}
+        <div className="flex bg-neutral-200/50 p-1 rounded-xl mb-6 w-fit">
+          <button
+            onClick={() => setSearchMode("inventory")}
+            className={`px-6 py-2 rounded-lg font-bold transition-all ${searchMode === "inventory" ? "bg-white text-blue-600 shadow-sm" : "text-neutral-500 hover:text-neutral-700"}`}
+          >
+            Multi-Room Inventory
+          </button>
+          <button
+            onClick={() => setSearchMode("occupancy")}
+            className={`px-6 py-2 rounded-lg font-bold transition-all ${searchMode === "occupancy" ? "bg-white text-blue-600 shadow-sm" : "text-neutral-500 hover:text-neutral-700"}`}
+          >
+            Simple Guest Search
+          </button>
+        </div>
+
+        {/* Room Cluster Selector / Occupancy Counter */}
+        {searchMode === "inventory" ? (
+          <RoomClusterSelector
+            clusters={roomClusters}
+            setClusters={setRoomClusters}
+          />
+        ) : (
+          <OccupancyCounter />
+        )}
 
         {/* Top Search */}
-        <SearchBar onSearch={setSearchQuery} />
+        <SearchBar onSearch={setSearchQuery} onSearchClick={handleSearch} />
 
         {/* Quick Filter Strip (visible on all sizes) */}
         <QuickFilterStrip filters={filters} setFilters={setFilters} />

@@ -3,6 +3,7 @@
 import Navigation from "@/components/legacy/Navigation";
 import Sidebar from "@/components/legacy/Sidebar";
 import { SidebarProvider, useSidebar } from "@/context/SidebarContext";
+import Breadcrumbs from "@/components/ui/Breadcrumbs";
 
 function PostBookingLayoutContent({ children }: { children: React.ReactNode }) {
   const { isCollapsed } = useSidebar();
@@ -10,9 +11,10 @@ function PostBookingLayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Navigation />
+      <Breadcrumbs />
       <Sidebar />
       <main
-        className={`mt-16 transition-all duration-300 ${isCollapsed ? "ml-20" : "ml-64"}`}
+        className={`transition-all duration-300 ${isCollapsed ? "ml-20" : "ml-64"}`}
       >
         {children}
       </main>

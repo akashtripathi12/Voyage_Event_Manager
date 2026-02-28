@@ -36,11 +36,8 @@ export const useHotelDiscovery = ({ eventId, filters }: UseHotelDiscoveryProps) 
                 // Fetch hotels by city (using event.location as city_id)
                 const cityHotels = await hotelApi.getHotelsByCity(event.location, token || undefined, filters);
 
-                // Filter by occupancy is now handled by backend rooms_* params if provided, 
-                // but we keep a fallback safety check if no room config is active
-                const filtered = cityHotels.filter(hotel => (hotel.occupancy || 0) >= guestLoad);
-
-                setHotels(filtered);
+                // Backend already filters by occupancy/rooms
+                setHotels(cityHotels);
 
                 // Also cache the cityId for the detail page fallback
                 localStorage.setItem(`last_city_id_${eventId}`, event.location);

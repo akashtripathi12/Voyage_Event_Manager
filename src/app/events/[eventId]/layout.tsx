@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import Navigation from "@/components/legacy/Navigation";
 import Sidebar from "@/components/legacy/Sidebar";
 import { SidebarProvider, useSidebar } from "@/context/SidebarContext";
+import Breadcrumbs from "@/components/ui/Breadcrumbs";
 
 function EventLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -18,7 +19,8 @@ function EventLayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Navigation />
-      <main className="mt-16 p-8">{children}</main>
+      <Breadcrumbs />
+      <main className="p-8">{children}</main>
     </>
   );
 }
