@@ -99,9 +99,19 @@ export const mapLocalFiltersToApiFilters = (local: LocalFilterState, rooms: Hote
         }
     }
 
-    // 6. Guest Capacity overrides
+    // 6. Occupancy / Guest Capacity
+    if (local.totalOccupancy) {
+        apiFilters.occupancy = local.totalOccupancy;
+        apiFilters.guests_per_room = local.totalOccupancy;
+    }
+
     if (local.guestCapacity) {
         apiFilters.hallCapacity = local.guestCapacity;
+    }
+
+    // 7. Cache Control
+    if (local.skipCache) {
+        apiFilters.skip_cache = true;
     }
 
     // 7. Room Config Construction

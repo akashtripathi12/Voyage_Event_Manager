@@ -59,11 +59,13 @@ export interface HotelFilters {
     propertyTypes?: string[];    // ["Resort", "Villa"]
 
     // Room
-    guestsPerRoom?: number;
+    occupancy?: number;
+    guests_per_room?: number; // Alias for occupancy
     roomCount?: number;
     roomConfig?: Array<{ occupancy: number, count: number }>; // Complex room config
     roomAmenities?: string[];    // ["Bathtub"]
     freeCancellation?: boolean;  // true/false for free_cancellation param
+    skip_cache?: boolean;        // string "true" in API
 
     // Event / Venue
 
@@ -115,6 +117,8 @@ export interface LocalFilterState {
     guestCapacity: number | null;
     foodType: string[];
     petFriendly: boolean;
+    totalOccupancy: number | null;
+    skipCache: boolean;
 }
 
 export const DEFAULT_FILTERS: LocalFilterState = {
@@ -129,6 +133,8 @@ export const DEFAULT_FILTERS: LocalFilterState = {
     guestCapacity: null,
     foodType: [],
     petFriendly: false,
+    totalOccupancy: null,
+    skipCache: false,
 };
 
 export interface RoomType {
