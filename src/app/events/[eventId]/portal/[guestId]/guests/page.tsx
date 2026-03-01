@@ -76,10 +76,8 @@ export default function GuestsPage({ params }: { params: Promise<{ eventId: stri
             const result: APIResponse = await response.json();
             const allGuests = result.guests || [];
             
-            console.log("Looking for GuestID (Organizer):", guestId);
-            if (allGuests.length > 0) {
-                console.log("[DEBUG] First guest from API:", JSON.stringify(allGuests[0], null, 2));
-            }
+
+
 
             const mappedGuests: SubGuest[] = allGuests.map(g => ({
                 id: g.guest_id || g.ID || g.id || '',
@@ -95,7 +93,7 @@ export default function GuestsPage({ params }: { params: Promise<{ eventId: stri
                 departureDate: g.DepartureDate || g.departure_date || g.departureDate || undefined
             }));
 
-            console.log(`Displaying ${mappedGuests.length} guests.`);
+
             setGuests(mappedGuests);
         } catch (error) {
             console.error("Error fetching guests:", error);
@@ -190,10 +188,7 @@ export default function GuestsPage({ params }: { params: Promise<{ eventId: stri
                 throw new Error("Failed to update guest");
             }
 
-            console.log("Guest updated successfully", {
-                arrivalDate: updatedGuest.arrivalDate,
-                departureDate: updatedGuest.departureDate
-            });
+
             // Refetch to ensure displayed data matches what DB stored
             fetchGuests();
         } catch (error) {
@@ -221,7 +216,7 @@ export default function GuestsPage({ params }: { params: Promise<{ eventId: stri
             if (!response.ok) {
                 throw new Error("Failed to delete guest");
             }
-            console.log("Guest deleted successfully");
+
         } catch (error) {
             console.error("Error deleting guest:", error);
             alert("Failed to delete guest.");

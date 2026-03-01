@@ -42,7 +42,7 @@ export function EventProvider({ children }: { children: ReactNode }) {
       });
       if (!res.ok) throw new Error("Failed to fetch events");
       const data = await res.json();
-      console.log("Fetched Events Data:", data); // Debug log restored
+
 
       // API Response structure: { success: true, data: { message: "...", events: [...] } }
       const eventsList = data.data?.events || [];
@@ -68,7 +68,7 @@ export function EventProvider({ children }: { children: ReactNode }) {
         roomsInventory: e.rooms_inventory || e.roomsInventory || e.RoomsInventory || [],
       };
     });
-      console.log("Mapped Events:", mappedEvents); // Debug log restored
+
       setEvents(mappedEvents);
     } catch (err: any) {
       console.error("Fetch events error:", err);

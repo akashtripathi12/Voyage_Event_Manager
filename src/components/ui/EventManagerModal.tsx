@@ -67,11 +67,11 @@ export function EventManagerModal({ isOpen, onClose, eventId, eventName, onAssig
         }
 
         const data = await res.json();
-        console.log("Event Manager Response:", data); // Debug log
+
         if (data.data?.tempPassword || data.tempPassword) {
             setTempPassword(data.data?.tempPassword || data.tempPassword);
         } else if (data.data?.user?.id || data.user?.id) {
-             console.log("User assigned, but no temp password (likely existing user)");
+
         }
 
         setSuccess(true);

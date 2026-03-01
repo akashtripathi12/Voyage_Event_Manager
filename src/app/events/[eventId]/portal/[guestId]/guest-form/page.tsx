@@ -59,7 +59,7 @@ export default function GuestFormPage({ params }: { params: Promise<{ eventId: s
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1500));
 
-        console.log('Form Submitted:', formData);
+
         setIsSuccess(true);
         setIsSubmitting(false);
     };

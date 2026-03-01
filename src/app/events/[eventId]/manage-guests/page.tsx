@@ -179,7 +179,7 @@ export default function ManageGuestsPage({
                 Guest Management
               </h1>
               <p className="text-sm text-neutral-600">
-                Manage RSVPs and guest details for Event ID: {eventId}
+                Manage RSVPs and guest details for Event
               </p>
             </div>
           </div>

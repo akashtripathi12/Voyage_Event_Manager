@@ -70,7 +70,7 @@ export default function PortalHeader({
             >
               <div className="relative h-12 w-12 shrink-0">
                 <Image
-                  src="/images/logo.jpg"
+                  src="/images/logo.png"
                   alt="TBO Logo"
                   fill
                   className="object-contain rounded-lg shadow-sm"

@@ -77,7 +77,7 @@ export default function CartPage() {
 
   // useEffect(() => {
   //   if (cart) {
-  //       console.log("Cart Data:", cart);
+
   //       toast.info(`Cart: H:${cart.hotels?.length || 0} F:${cart.flights?.length || 0} T:${cart.transfers?.length || 0}`);
   //   }
   // }, [cart]);
@@ -189,7 +189,7 @@ export default function CartPage() {
       const currentEvent = events.find((e) => e.id === eventId);
       const existingRooms = currentEvent?.roomsInventory || [];
 
-      console.log(cart);
+
 
       // 1. Gather all rooms from the cart
       const newRooms = (cart?.hotels || []).flatMap((group) =>
@@ -246,12 +246,6 @@ export default function CartPage() {
             selectedHotelId = fallbackGroup.hotel_wishlist_item.ref_id;
         }
       }
-
-      console.log("Cart Page Finalizing...", { 
-        hasTargetGroup: !!targetGroup, 
-        selectedHotelId, 
-        mergedRoomsCount: mergedRooms.length 
-      });
 
       if (selectedHotelId) {
         await updateEvent(eventId, {
