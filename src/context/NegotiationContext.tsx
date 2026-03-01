@@ -32,7 +32,7 @@ interface NegotiationContextType extends NegotiationState {
   syncItemsFromCart: (freshItems: NegotiationItem[], eventDetails: any) => void;
   updateItemPrice: (itemId: string, price: number, isAgent: boolean) => void;
   updateItemMessage: (itemId: string, message: string) => void;
-  sendMessage: (message: string, sender: "Agent" | "TBO Manager" | "System") => void;
+  sendMessage: (message: string, sender: "Agent" | "TBO Manager" | "Hotel" | "System") => void;
   sendToHotel: () => Promise<void>;
   submitCounterOffer: () => Promise<void>;
   lockDeal: () => Promise<void>;
@@ -191,7 +191,7 @@ export const NegotiationProvider: React.FC<{
 
   const sendMessage = (
     message: string,
-    sender: "Agent" | "TBO Manager" | "System",
+    sender: "Agent" | "TBO Manager" | "Hotel" | "System",
   ) => {
     const newMsg: ChatMessage = {
       id: Date.now().toString(),

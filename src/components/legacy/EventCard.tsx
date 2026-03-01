@@ -39,10 +39,7 @@ export default function EventCard({ event }: EventCardProps) {
             <p className="text-xs text-neutral-500 mb-1">Guests</p>
             <p className="text-lg font-semibold text-neutral-900">{event.guestCount}</p>
           </div>
-          <div>
-            <p className="text-xs text-neutral-500 mb-1">Hotels</p>
-            <p className="text-lg font-semibold text-neutral-900">{event.hotelCount}</p>
-          </div>
+
           <div>
             <p className="text-xs text-neutral-500 mb-1">Inventory</p>
             <p className={`text-lg font-semibold ${inventoryColor}`}>{event.inventoryConsumed}%</p>
