@@ -33,6 +33,29 @@ export default function GuestsPage({ params }: { params: Promise<{ eventId: stri
     const { token, isAuthenticated } = useAuth();
     const [guests, setGuests] = useState<SubGuest[]>([]);
     const [loading, setLoading] = useState(true);
+    const [eventDates, setEventDates] = useState<{ start: string; end: string } | undefined>(undefined);
+
+    const fetchEvent = async () => {
+        if (!token) return;
+        try {
+            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+            const res = await fetch(`${backendUrl}/api/v1/events/${eventId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const event = data?.data?.event || data?.event || data;
+                if (event) {
+                    setEventDates({
+                        start: event.start_date || event.startDate || '',
+                        end: event.end_date || event.endDate || ''
+                    });
+                }
+            }
+        } catch (err) {
+            console.error("Error fetching event:", err);
+        }
+    };
 
     const fetchGuests = async () => {
         if (!token) return;
@@ -83,6 +106,7 @@ export default function GuestsPage({ params }: { params: Promise<{ eventId: stri
 
     useEffect(() => {
         if (isAuthenticated) {
+            fetchEvent();
             fetchGuests();
         }
     }, [eventId, guestId, token, isAuthenticated]);
@@ -110,6 +134,10 @@ export default function GuestsPage({ params }: { params: Promise<{ eventId: stri
                     eventId={eventId}
                     token={token}
                     onGuestAdded={fetchGuests}
+                    eventDates={eventDates ? {
+                        start: eventDates.start ? new Date(eventDates.start).toISOString().split('T')[0] : '',
+                        end: eventDates.end ? new Date(eventDates.end).toISOString().split('T')[0] : ''
+                    } : undefined}
                 />
                 )}
             </div>

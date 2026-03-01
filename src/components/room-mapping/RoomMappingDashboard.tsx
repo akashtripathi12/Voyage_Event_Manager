@@ -15,9 +15,10 @@ const isUUID = (value: string) =>
 interface RoomMappingDashboardProps {
   eventId: string;
   role: "agent" | "head_guest";
+  guestId?: string;
 }
 
-export default function RoomMappingDashboard({ eventId, role }: RoomMappingDashboardProps) {
+export default function RoomMappingDashboard({ eventId, role, guestId }: RoomMappingDashboardProps) {
   const { token } = useAuth();
   const queryClient = useQueryClient();
   const [showAllocationUI, setShowAllocationUI] = useState(false); // UX State for "Start Allocation"
@@ -201,7 +202,7 @@ export default function RoomMappingDashboard({ eventId, role }: RoomMappingDashb
                         {eventStatus === "active" ? "ACTIVE" : eventStatus.toUpperCase()}
                     </span>
                 </h1>
-                <Link href={role === "agent" ? `/events/${eventId}` : `/events/${eventId}/portal/1/rooms`} className="text-sm text-neutral-500 hover:text-neutral-900 mt-1 block">
+                <Link href={role === "agent" ? `/events/${eventId}` : `/events/${eventId}/portal/${guestId}`} className="text-sm text-neutral-500 hover:text-neutral-900 mt-1 block">
                     ← Back to Dashboard
                 </Link>
             </div>

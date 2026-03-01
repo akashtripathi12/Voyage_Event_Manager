@@ -138,6 +138,7 @@ export function EventProvider({ children }: { children: ReactNode }) {
         budgetSpent: (updatedEvent as any).budgetSpent,
         organizer: updatedEvent.organizer,
         roomsInventory: updatedEvent.roomsInventory,
+        hotelId: (updatedEvent as any).hotelId,
       };
 
       const res = await fetch(`${backendUrl}/api/v1/events/${id}`, {

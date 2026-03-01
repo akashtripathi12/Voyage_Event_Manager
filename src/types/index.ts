@@ -40,6 +40,7 @@ export interface CuratedVenue {
     images: string[];
     amenities: string[];
     eventId: string;
+    status?: "wishlist" | "cart" | "approved";
 }
 
 // Metric types (dashboard)
