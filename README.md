@@ -1,7 +1,7 @@
-# 🌊 Voyage Event Manager (TBO)
+# Voyage Event Manager (TBO)
 
 > **Enterprise-grade SaaS platform for MICE events and destination weddings.**  
-> Streamline your group bookings — from hotel inventory and room mapping to guest portals and post-booking intelligence.
+> Streamline your group bookings from hotel inventory and room mapping to guest portals and post-booking intelligence.
 
 ---
 
@@ -243,10 +243,8 @@ Authentication is powered by **[Clerk](https://clerk.com/)**, providing secure, 
 - Accesses via a **secure magic link** sent by the agent — no account required.
 
 ```
-Agent  ──── manages ────► Events ──── invites ────► Head Guests
-                                                        │
-                                            sub-guests self-register
-                                            via Guest Portal
+Agent ────► manages ────► Events ────► invites ────► Head Guests ────► sub-guests/self-register via Guest Portal
+                                            
 ```
 
 ---
@@ -257,15 +255,15 @@ The project follows **Domain-Driven Design (DDD)** with a clear separation of co
 
 ```
 ┌─────────────────────────────────┐
-│           Next.js App Router     │  ← Pages & API Routes
+│       Next.js App Router        │  ← Pages & API Routes
 ├─────────────────────────────────┤
-│         React Context API        │  ← Auth, Event, Sidebar state
+│       React Context API         │  ← Auth, Event, Sidebar state
 ├─────────────────────────────────┤
-│       Domain Modules (src/modules)│  ← Business logic per domain
+│    Domain Modules (src/modules) │  ← Business logic per domain
 ├─────────────────────────────────┤
-│     Services + Custom Hooks      │  ← Data fetching (TanStack Query)
+│     Services + Custom Hooks     │  ← Data fetching (TanStack Query)
 ├─────────────────────────────────┤
-│      Reusable UI Components      │  ← Design system (CVA + Tailwind)
+│      Reusable UI Components     │  ← Design system (CVA + Tailwind)
 └─────────────────────────────────┘
 ```
 
@@ -356,15 +354,6 @@ rm -rf .next
 
 ---
 
-## 🤝 Contributing
-
-1. **Identify the domain** — Find the right module in `src/modules/`
-2. **Define types first** — Add/update types in `modules/[domain]/types.ts`
-3. **Build components** — Add UI in `src/components/ui/`
-4. **Add routes** — Create pages in `src/app/`
-5. **Keep config central** — Add routes/constants to `src/config/`
-6. **Use import aliases** — Always use `@/` paths, never relative `../` paths
-
 ### File Naming Conventions
 
 | Type | Convention | Example |
@@ -376,5 +365,3 @@ rm -rf .next
 | Hooks | `use` prefix + camelCase | `useGuestList.ts` |
 
 ---
-
-*Built with ❤️ for travel agents who manage extraordinary experiences.*
